@@ -33,9 +33,9 @@ spec:
             - name: DB_NAME
               value: webapp
             - name: DB_USERNAME
-              value: "localadmin"
+              value: "your-username"
             - name: DB_PASSWORD
-              value: "Felicia234!"
+              value: "mypassword"
 
 ---
 apiVersion: v1
