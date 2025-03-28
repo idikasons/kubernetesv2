@@ -1,0 +1,30 @@
+#ERROR
+
+Unable to reach the kubernetes API.
+Use --cloudonly to do a rolling-update without confirming progress with the k8s API
+
+Error: error listing nodes in cluster: Get "https://api.kubevpro.signaturedatahub.info/api/v1/nodes": remote error: tls: handshake failure
+
+
+
+## Fix:
+
+kops rolling-update cluster --name=kubevpro.signaturedatahub.info --state=s3://signatures3 --yes --cloudonly
+
+
+## Use this instead after running
+kops create cluster --name=kubevpro.signaturedatahub.info --state=s3://signatures3 --zones=us-east-1a,us-east-1b --node-count=2 --node-size=t3.small --control-plane-size=t3.medium --dns-zone=kubevpro.signaturedatahub.info --node-volume-size=12 --control-plane-volume-size=12 --ssh-public-key ~/.ssh/id_ed25519.pub
+
+>>> OR
+ the ansible script for kops kubernetes deployment
+
+kops update cluster --name=kubevpro.signaturedatahub.info --state=s3://signatures3 --yes --admin
+
+kubectl get nodes
+
+# If you are faced with a TLS handshake issue ( Go to the console and reboot the master node)
+# If the reboot did not help ll ll ~/.kube/ (check date of the cache directory) rm -rf ~/.kube/cache/
+
+# Delete cluster using below
+
+kops delete cluster --name=kubevpro.signaturedatahub.info --state=s3://signatures3 --yes

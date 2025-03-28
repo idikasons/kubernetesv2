@@ -1,0 +1,80 @@
+#jenkins deployment manifest
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins-deploy
+  labels:
+    app: jenkins
+
+spec:
+  replicas: 1
+  selector:                     #Labels to be used as part of pod Template
+    matchLabels:
+      app: jenkins
+  
+  template:                                            #pod template
+    metadata:
+      labels:
+        app: jenkins
+    spec:                                              #Pod specification
+      containers:
+        - name: jenkins
+          image: signaturedevops.azurecr.io/jenkins-new
+          
+          ports:                                       #Container port
+            - containerPort: 8080
+              name: jenkins-port
+          volumeMounts:   #Volume mounts for the container/pod/container level resource
+            - name: jenkins-persistent-storage
+              mountPath: /var/lib/jenkins
+            
+      volumes:                                         #Pod spec level resource
+        - name: jenkins-persistent-storage
+          persistentVolumeClaim:
+            claimName: azure-managed-jenkins-disk-pvc          # must match your earlier created claims name pvc, kubectl get pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins-loadbalancer-service
+
+spec:
+  type: LoadBalancer                                                                    # Type can be LoadBalancer, ClusterIp, NodePort
+  selector:
+    app: jenkins                                                             # Loadbalancer traffic across Pods matching this label selector
+  ports:
+    - name: http
+      port: 8080                                                                           #service port
+      targetPort: 8080                                                                     #Container Port
+
+##To deploy clusterIP or NodePort service, just change the type to either.
+
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: jenkins-managed-retain-sc
+provisioner: kubernetes.io/azure-disk
+reclaimPolicy: Retain
+
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+parameters:
+
+  storageAccountType: Standard_LRS
+  kind: managed
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: azure-managed-jenkins-disk-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: jenkins-managed-retain-sc
+  resources:
+    requests:
+      storage: 4Gi
+

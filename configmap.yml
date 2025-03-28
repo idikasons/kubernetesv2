@@ -1,0 +1,119 @@
+        #Custom storage class, disks are part of the Aks Cluster, so gets deleted only when the Aks Cluster is deleted not the pods etc
+
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: managed-retain-sc
+
+        #Based on the kubectl get sc (storage class). Note the retain in the name means (ReclaimPolicy)retain disk as part of Aks cluster
+        # Note you can do managed-delete etc. Name must include sc as storage class flag.
+
+provisioner: kubernetes.io/azure-disk
+
+        #Because we re using Azure disk to provision
+
+reclaimPolicy: Retain
+
+         #By default it is 'delete' but because we are doing a persistent storage, it has to be retain
+
+volumeBindingMode: WaitForFirstConsumer
+
+       # By default it is immediate (kubectl get sc) , this means as soon as the persistent volume claim is created,
+     #the persistent volume also gets created automatically, so we would change that, so that it only gets created when the pod workload is created/deployed.
+
+allowVolumeExpansion: true   ##Allow auto expansion of disk when needed
+
+parameters:
+  storageAccountType: Standard_LRS   #you can use Standard_LRS, Premium_LRS
+  kind: managed
+
+# default is shared but we would use managed or dedicated
+
+
+
+---
+##Persistent storage manifest
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: azure-managed-disk-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: managed-retain-sc    ##Same name as name for the storage class name definition
+  resources:
+    requests:
+      storage: 5Gi                       ##Size of disk
+
+
+#ConfigMap is an API object used to store non-confidential data in key-pairs. Pods can use it as environment variable/config files in a volume etc
+#This configMap will be mounted on our web app deployment as a volume mount
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web-app-dbcreation-script
+data: 
+  mysql_web-app.sql: |-
+    DROP DATABASE IF EXISTS web-appdb;
+    CREATE DATABASE web-appdb;
+
+---
+#MYSQL deployment manifest
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-deploy
+  labels:
+    app: mysql
+
+spec: 
+  replicas: 1
+  selector:                     #Labels to be used as part of pod Template
+    matchLabels:
+      app: mysql
+  strategy:                                            #Strategy for deployment
+    type: Recreate
+  template:                                            #pod template
+    metadata:
+      labels:
+        app: mysql
+    spec:                                              #Pod specification
+      containers:
+        - name: mysql
+          image: mysql:5.6
+          env:                         #Environment variable key pair values
+            - name: MYSQL_ROOT_PASSWORD
+              value: chang3m3
+          ports:                                       #Container port
+            - containerPort: 3306
+              name: mysql-port
+          volumeMounts:   #Volume mounts for the container/pod/container level resource
+            - name: mysql-persistent-storage
+              mountPath: /var/lib/mysql
+            - name: web-app-dbcreation-script          #Config file Mapping
+              mountPath: /docker-entrypoint-initdb.d   #Ref https://hub.docker.com/_/mysql #Initializing a fresh Instance Read up for more details
+                                                       # it will use the data from above where we defined the mysql user root and password file above
+      volumes:                                         #Pod spec level resource
+        - name: mysql-persistent-storage
+          persistentVolumeClaim: 
+            claimName: azure-managed-disk-pvc          # must match your earlier created claims name pvc, kubectl get pvc
+        - name: web-app-dbcreation-script
+          configMap:
+            name: web-app-dbcreation-script
+
+
+---
+#create our mysql/pod clusterIP
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+spec:
+  selector:
+    app: mysql
+  ports:
+    - port: 3306
+  clusterIP: None  #Means we are going to use POD IP instead of allocating one separate IP for our my ClusterIP service

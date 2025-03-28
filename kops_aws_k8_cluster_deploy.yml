@@ -1,0 +1,47 @@
+---
+- name: Deploy Kubernetes Cluster on AWS using Kops from CentOS 7 VM
+  hosts: localhost
+  vars:
+    cluster_name: kubevpro.signaturedatahub.info
+    state_store_bucket: signatures3
+    k8s_zones: us-east-1a,us-east-1b
+    k8s_node_count: 2
+    k8s_node_size: t3.small
+    k8s_master_size: t3.medium
+    k8s_node_volume_size: 12
+    k8s_master_volume_size: 12
+    dns_zone: kubevpro.signaturedatahub.info
+    ssh_public_key_path: ~/.ssh/id_ed25519.pub
+
+  tasks:
+    - name: Create Kubernetes cluster using kops
+      shell: |
+        export KOPS_STATE_STORE=s3://{{ state_store_bucket }}
+        kops create cluster \
+          --name={{ cluster_name }} \
+          --state=s3://{{ state_store_bucket }} \
+          --zones={{ k8s_zones }} \
+          --node-count={{ k8s_node_count }} \
+          --node-size={{ k8s_node_size }} \
+          --control-plane-size={{ k8s_master_size }} \
+          --dns-zone={{ dns_zone }} \
+          --node-volume-size={{ k8s_node_volume_size }} \
+          --control-plane-volume-size={{ k8s_master_volume_size }} \
+          --ssh-public-key={{ ssh_public_key_path }}
+      args:
+        creates: /tmp/kops-cluster-created
+
+    - name: Update cluster configuration with admin access
+      shell: |
+        export KOPS_STATE_STORE=s3://{{ state_store_bucket }}
+        kops update cluster --name={{ cluster_name }} --state=s3://{{ state_store_bucket }} --yes --admin
+
+    - name: Validate the Kubernetes cluster
+      shell: |
+        export KOPS_STATE_STORE=s3://{{ state_store_bucket }}
+        kops validate cluster
+      register: validate_output
+      retries: 10
+      delay: 30
+      until: validate_output.rc == 0
+

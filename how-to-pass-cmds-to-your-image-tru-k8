@@ -1,0 +1,40 @@
+Remember in docker we use (CMD) to pass commands to out containers
+eg.
+FROM centos:7
+CMD echo "This is a test," | wc -
+
+# Note ENTRYPOINT has higher priority in a dockerfile than CMD. The commands in the ENTRYPOINT will run first
+
+ENTRYPOINT ["/bin/bash", "-c", "echo 'Hello World' && sleep 10"]   << Then you can have CMD below it
+
+# when used together ENTRYPOINT and CMD, ENTRYPOINT comes with the command and CMD the argument (when used together in a docker file)
+eg.
+(1)
+
+FROM ubuntu
+CMD ["echo hi"]
+
+(2)
+
+FROM ubuntu
+ENTRYPOINT["echo"]
+CMD["hi"]
+
+
+
+##### Now see an example of how you can mention command to run in the container level inside a pod in a manifest
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my_pod-cmd-demo
+  labels:
+    purpose: demo-command
+spec:
+  containers:
+  - name: command-demo-container
+    image: debian
+    command: ["printenv"]
+    args: ["HOSTNAME", "KUBERNETES_PORT"]
+  restartPolicy: OnFailure
+

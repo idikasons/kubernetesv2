@@ -1,0 +1,44 @@
+Step By Step Guide 
+
+✅ 1. Install prerequisites (if not already installed):
+
+    AWS CLI: Install guide
+    kubectl: Install guide
+    eksctl (optional but very helpful): Install guide
+
+✅ 2. Authenticate and configure AWS CLI:
+
+aws configure
+
+Enter your:
+
+    AWS Access Key ID
+    AWS Secret Access Key
+    Default region (e.g., us-east-1)
+    Output format (default json)
+
+✅ 3. Get the cluster config:
+
+Assuming your EKS cluster is already created, run:
+
+aws eks --region <your-region> update-kubeconfig --name <your-cluster-name>
+
+    Example:
+
+aws eks --region us-east-1 update-kubeconfig --name my-eks-cluster
+
+This command updates (or creates) your local kubeconfig file so that kubectl can talk to the EKS cluster.
+✅ 4. Test your connection:
+
+kubectl get nodes
+
+If everything’s good, you should see the worker nodes.
+✅ Quick Tip:
+
+If you ever want to view the kubeconfig file location:
+
+echo $KUBECONFIG
+
+Or the default file is usually located at:
+
+~/.kube/config

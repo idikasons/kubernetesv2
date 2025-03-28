@@ -1,0 +1,6 @@
+source <(kubectl completion bash)
+echo "source <(kubectl completion bash)" >> ~/.bashrc
+
+
+## see kubernetes cheatsheet url below
+https://kubernetes.io/docs/reference/kubectl/cheatsheet/

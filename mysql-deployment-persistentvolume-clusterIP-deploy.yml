@@ -1,0 +1,72 @@
+#ConfigMap is an API object used to store non-confidential data in key-pairs. Pods can use it as environment variable/config files in a volume etc
+#This configMap will be mounted on our web app deployment as a volume mount
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web-app-dbcreation-script
+data: 
+  mysql_web-app.sql: |-
+    DROP DATABASE IF EXISTS web-appdb;
+    CREATE DATABASE web-appdb;
+
+---
+#MYSQL deployment manifest
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-deploy
+  labels:
+    app: mysql
+
+spec: 
+  replicas: 1
+  selector:                     #Labels to be used as part of pod Template
+    matchLabels:
+      app: mysql
+  strategy:                                            #Strategy for deployment
+    type: Recreate                                  #using recreate cos its a db one pod should be running at a time,
+                                                    #so recreate makes sure it kills any other db pod running before a new creation of pod
+  template:                                            #pod template
+    metadata:
+      labels:
+        app: mysql
+    spec:                                              #Pod specification
+      containers:
+        - name: mysql
+          image: mysql:5.6
+          env:                         #Environment variable key pair values
+            - name: MYSQL_ROOT_PASSWORD
+              value: chang3m3
+          ports:                                       #Container port
+            - containerPort: 3306
+              name: mysql-port
+          volumeMounts:   #Volume mounts for the container/pod/container level resource
+            - name: mysql-persistent-storage
+              mountPath: /var/lib/mysql
+            - name: web-app-dbcreation-script          #Config file Mapping
+              mountPath: /docker-entrypoint-initdb.d   #Ref https://hub.docker.com/_/mysql #Initializing a fresh Instance Read up for more details
+                                                       # it will use the data from above where we defined the mysql user root and password file above
+      volumes:                                         #Pod spec level resource
+        - name: mysql-persistent-storage
+          persistentVolumeClaim: 
+            claimName: azure-managed-disk-pvc          # must match your earlier created claims name pvc, kubectl get pvc
+        - name: web-app-dbcreation-script
+          configMap:
+            name: web-app-dbcreation-script
+
+
+---
+#create our mysql/pod clusterIP
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+spec:
+  selector:
+    app: mysql
+  ports:
+    - port: 3306
+  clusterIP: None  #Means we are going to use POD IP instead of allocating one separate IP for our my ClusterIP service

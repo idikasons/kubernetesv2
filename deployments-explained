@@ -1,0 +1,50 @@
+# This is a more used strategy in maintaining, upgrading and rolling back pods grecaefully.
+It uses replica set to manage your pods.  it is used to update and upgrade pods in a controlled manner.
+It deletes the old pods and recreate new one lets say you upgraded an Image.
+It uses Deploymentment controller to make changes to pods.
+
+## Sample below
+
+apiVersion: apps/v1
+kind: Deployment 
+metadata:
+  name: nginx-deployment           <<Name of your deployment
+  labels: 
+    app: nginx-deployment-label                     << Labels of your deployment
+
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-pod-label                   <<< Label of your pod
+  template:                                  << This is where the data of your container/pod is below
+    matadata:
+      labels:
+        app: nginx-pod-label                  <<pod label
+    spec: 
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80
+
+
+## Lets say after deployment I want to make a change to the container image I want to change (nginx:1.14.2 version to nginx:1.16.1) you can either change it in the manifest(best practice) Or run from the command terminal
+
+(kubectl set image deployment.v1.apps/nginx-deployment nginx=nginx:1.16.1
+
+deployment.v1.apps = kind.apiVersion
+nginx-deployment = name of deployment 
+nginx = name of image not container name
+nginx:1.16.1 = version
+
+
+## Other commands
+kubectl rollout status deployment/<deployment-name>   # Check the rollout/deployment status
+kubectl rollout pause deployment/<deployment-name>    # Pause an ongoing rollout
+kubectl rollout resume deployment/<deployment-name>   # To resume a rollout
+kubectl rollout undo deployment/<deployment-name>     # To undo changes done on a deployment rollout eg. Roll your image back to old version
+kubectl rollout undo deployment/<deployment-name> --to-revision=<revision-number>   # To undo changes done on a deployment rollout to a specific version
+kubectl rollout history deployment/<deployment-name>   # To view rollout history
+
+

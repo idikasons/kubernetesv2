@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: signature-app-pod
+  labels:
+    role: myrole
+spec:
+  containers:
+    - name: web
+      image: signaturedevops.azurecr.io/nginx-v1
+      ports:
+        - name: web
+          containerPort: 80
+          protocol: TCP

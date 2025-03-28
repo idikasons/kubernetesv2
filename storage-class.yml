@@ -1,0 +1,47 @@
+        #Custom storage class, disks are part of the Aks Cluster, so gets deleted only when the Aks Cluster is deleted not the pods etc
+
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: managed-retain-sc   
+
+        #Based on the kubectl get sc (storage class). Note the retain in the name means (ReclaimPolicy)retain disk as part of Aks cluster
+        # Note you can do managed-delete etc. Name must include sc as storage class flag.
+
+provisioner: kubernetes.io/azure-disk     
+
+        #Because we re using Azure disk to provision
+
+reclaimPolicy: Retain  
+
+         #By default it is 'delete' but because we are doing a persistent storage, it has to be retain
+
+volumeBindingMode: WaitForFirstConsumer
+
+       # By default it is immediate (kubectl get sc) , this means as soon as the persistent volume claim is created, 
+     #the persistent volume also gets created automatically, so we would change that, so that it only gets created when the pod workload is created/deployed.
+
+allowVolumeExpansion: true   ##Allow auto expansion of disk when needed
+
+parameters:
+  storageAccountType: Standard_LRS   #you can use Standard_LRS, Premium_LRS
+  kind: managed             
+
+# default is shared but we would use managed or dedicated
+
+
+
+---
+##Persistent storage manifest
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: 
+  name: azure-managed-disk-pvc
+spec: 
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: managed-retain-sc    ##Same name as name for the storage class name definition
+  resources: 
+    requests:
+      storage: 5Gi                       ##Size of disk
+

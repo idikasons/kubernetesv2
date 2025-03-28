@@ -1,0 +1,110 @@
+apiVersion: v1        
+kind: pod
+metadata:                                       << Information about the pod
+  name: webapp-pod
+  namespace: my-name-space                     << This will create this pod in the namespace group
+  labels:                                      << tags
+    apps: frontend
+    project: infinity
+
+
+spec:                                          << Technical dtails of the pod
+  containers:
+    - name: httpd-container
+      image: httpd
+      ports:
+        - name: name-of-port
+          containerPort: 80                            <<<< Container port
+
+
+
+
+
+
+
+
+Kind(Types)                  Version
+POD                           v1
+service                       v1     << Used for external port exposure, port mapping like in docker (hostport:containerPort) This is the hostport
+Deployment                    apps/v1
+Ingress                       networking.../v1beta1
+
+
+## Note:
+Kubectl create -f deployment.yml ( Creates the deployment if it doesn't exist and fails if it already does exist)
+
+kubectl apply -f deployment.yml ( would create the deployment if it does not exist and also used to update an existing deployment)
+
+kubectl get deployment ( To see deployments status)
+
+kubectl get po or pod (Shows pod status or see pods)
+kubectl get pod (pod-name) -o yaml ( Gives you more info about a pod)
+kubectl get pod (pod-name) -o yaml >mypod_definition.yml (redirects the out to mypod_definition.yml file)
+
+kubectl get svc (See service details)
+
+kubectl get pvc (used to list all PersistentVolumeClaims (PVCs) in your current Kubernetes namespace)
+
+kubectl describe pod (pod-name) >> To get details about a pod
+
+kubectl get all (shows all the resources in default namespace)
+
+kubectl get all --all-namespaces ( Get all the reources and their namespaces)
+
+# Not everything is editable in a pod but use (kubectl edit pod (pod-name) )   << To modify a pod
+
+######>>>>>  Namespaces(Grouping) eg. Dev, Prod, Test etc (When you delete a Namespace it deletes all the resources in it) 
+
+kubectl get ns (To list your namespaces)   
+kubectl get svc -n (namespace name) <<<<< To see services(replace with another eg. pod,deploy) in a particular namespace
+kubectl delete pod (pod-name)/(object name eg. service,pv,pvc
+pv=the actual disk,storage device and can be claimed by kubernetes through (pvc)=PersistentVolumeClaims
+  
+kubectl create ns (namespacename) >> To create a namespace
+kubectl run eg. nginx --image=nginx -n (namespacename) << To run/create a pod in a namespace
+kubectl delete ns (namespacename)  >> This deletes the namespace and all resources in it (be careful)
+kubectl get rs   << Get replica set
+#### Note you can either scale up or down using the definition file by reducing or increasing the replica count or (kubectl scale --replicas=1(your#) rs/(replicasetlabel) )
+kubectl get deploy  << Get deployment
+
+
+#### Kubeneter Logs
+###(1) Error: ImagePullBackOf
+when you run >>>> (kubectl get po/pod) <<<<<< when you see ImagePullBackOff=You gave a wrong image name 
+You run >>>> (kubectl get pod -o wide) and (you see the pod name eg. (pod-name) <<<< and you do not still get more info about this error
+do >> kubectl get pod (pod-name) -o yaml << Find the line with (Back-off pulling image) re-verify the image name shown
+You can also use (kubectl describe pod (pod-name) To see under message: The error and re-verify the image name correct the yaml/build script file too.
+( If you see (pull access denied) it might also be the image is in a private repository and would need authencation).
+
+
+###(2) Error: CrashLoopBackOff
+
+Lets say we did (kubectl get pod (pod-name)) we find a pod under its status (CrashLoopBackOff)
+we do >> (kubectl get pod (pod-name) -o yaml/json (Trying to dig further) and we see its trying to restart the container 
+we do (kubectl get pod (pod-name)) and see under RESTART how many times it tried (not neccasry) 
+you try (kubectl describe pod (pod-name) and still yet same error no clues of why 
+finally use (kubectl logs (pod-name) <<< This will give you the container logs inside of the pod. So now you are looking at the engine logs 
+(kubectl logs (pod-name) will Tell you the output of the commands the container itself is running sample below
+CMD ["/usr/sbin/apache2ctl", "-D", "FOREGROUND"] << In your docker file. Remember images=container=pod (so containers from images run in pod(s)
+
+Error: /docker-entrypoint. exec not found (means command not found) Check command your cli syntax.
+
+
+
+# Note (ETCD) stores all the information about your cluster
+# Service (svc) used to expose an application as a network service. Similiar to LoadBalancers.Because Ips change each time a new pod is created, to have a static endpoint, we use services such as. 
+>> ClusterIP(name)=Used to communicate a pod within (internally) the cluster.(so pods communicate each other using ClusterIps),
+>> NodePort(Name)& NodeIP =Worker Node IPs, can be accessed also externally (only for non-prod) environment 
+>> LoadBalancer=Provisions an external load balancer (in cloud environments). Uses the (Label Selector: To identify pods)
+>> ExternalName=Maps the service to an external DNS name.
+
+# If you have a custom kube config file in another directory not the default ~/.kube/config use below to mention it
+(kubectl create/apply -f (your yml definition file, which is your yaml file) --kubeconfig=/path/to/your/kubeconfig file
+
+# Definition files=manifests
+# Replica sets is for High avaliability, running same copy of your pod as a replica when you (kubectl delete rs (rsName) it in turn deletes the pods in it.
+# Note: The schduler in the Master Node distributes pods across the worker nodes
+
+## see kubernetes cheatsheet url below for more including how to use (kubectl patch node,kubectl delete pod unwanted --now) commands
+https://kubernetes.io/docs/reference/kubectl/cheatsheet/
+ 

@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: signature-appv1-replica
+  labels:
+    app: signature-appv1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: signature-appv1
+  template:
+    metadata:
+      labels:
+        app: signature-appv1
+    spec:
+      containers:
+      - name: signature-appv1
+        image: signaturedevops.azurecr.io/nginx-v1
+        ports:
+        - containerPort: 80
+

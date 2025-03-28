@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: loadbalancer-svc
+spec: 
+  type: LoadBalancer
+  ports:
+    - targetPort: vproapp-port  
+      port: 80        
+      protocol: TCP
+  selector:
+    app: vproapp
+
+
+# You need the pod label for LoadBalancer (selector)  and port number to configure it
+# For NodePort(Access with any of the nodes public IP) but for LoadBalancer, which actually gets created see LoadBalancers on portal and use the IP or endpoint url and port number
+
+# The (LB) sits in front of the Nodeport. Yes a NodePort always gets created , but not for the ClusterIP. Cos its used for internal pod communication such as frontend pods communicating with backend pods/services

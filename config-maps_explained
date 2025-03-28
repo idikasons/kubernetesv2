@@ -1,0 +1,121 @@
+Used to inject and set variables/files in pods
+It is the collection of variables
+
+##Imperative way not adviced just for learning
+eg.
+
+kubectl create configmap db-config --from-literal=MYSQL_DATABASE=accounts \ --from-literal=MYSQL_ROOT_PASSWORD=yourpasswd
+
+
+kubectl get cm   << shows you your created configmaps
+kubectl get cm db-config(name of configmap) -o yaml OR kubectl describe cm db-config(name of configmap)  << To see info or keys in it
+
+
+Two ways to use configmap in a manefist
+
+(1)
+
+apiVersion: v1
+kind: pod
+metadata:
+  name: db-pod
+  labels: 
+    app: db
+    project: configmapping example
+spec: 
+  containers:
+    - name: mysql-container
+      image: mysql:5.7
+      envFrom:                           << So this will inject the contect of the entire config map to our container in the container level
+        - configMapRef:
+            name: db-config
+      ports:
+        - name: db-port
+
+(2) To select a specific key or content in our configmap
+
+apiVersion: v1
+kind: pod
+metadata:
+  name: db-pod
+  labels:
+    app: db
+    project: configmapping example
+spec:
+  containers:
+    - name: mysql-container
+      image: mysql:5.7
+      env:
+        - name: DB_HOST              << This can be any name anyways
+          valueFrom:
+            configMapKeyRef:
+              name: db-config         << Name of your configMap
+              key: DB_HOST            << So the value of this in our configMap will be stored in the (- name: DB_HOST) above and injected to our container
+
+
+
+### Note you can also inject a configuration file as a mountPath in your container 
+
+see below example:
+
+#######################################################################################################################################################
+
+(1) create a configMap
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-config
+data:
+  config1.txt: |
+    This is the first config file.
+  config2.txt: |
+    This is the second config file.
+
+########################################################################################################################################################
+(2) mount the ConfigMap as a directory inside a pod
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: configmap-demo
+spec:
+  containers:
+    - name: demo-container
+      image: busybox
+      command: [ "sleep", "3600" ]                           # Keeps the container running for testing
+      volumeMounts:
+        - name: config-volume
+          mountPath: /etc/config                             # Mount the ConfigMap as a directory
+  volumes:
+    - name: config-volume
+      configMap:
+        name: my-config                                       # Reference the ConfigMap created above
+
+##########################################################################################################################################################
+
+
+Explanation:
+
+    The ConfigMap (my-config) contains two text files (config1.txt and config2.txt).
+
+    The Pod (configmap-demo) mounts the ConfigMap as a directory at /etc/config.
+
+    Inside the container:
+
+        /etc/config/config1.txt will have "This is the first config file."
+
+        /etc/config/config2.txt will have "This is the second config file."
+
+############## Verify the ConfigMap Mount ###################################
+
+kubectl apply -f configmap.yaml
+kubectl apply -f pod.yaml
+kubectl exec -it configmap-demo -- sh
+
+And inside the container do
+
+ls /etc/config
+cat /etc/config/config1.txt
+cat /etc/config/config2.txt
+

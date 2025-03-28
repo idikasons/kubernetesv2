@@ -1,0 +1,86 @@
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: azure-fileshare-sc
+provisioner: kubernetes.io/azure-file
+mountOptions:
+  - dir_mode=0777  #permission for directories on the mounted on the volume mount
+  - file_mode=0777   #permission for files on the mounted on the volume mount
+  - uid=0            #users who can access the mounts
+  - gid=0            # Groups who can access the mounts
+  - mfsymlinks
+  - cache=strict
+parameters:
+  skuName: Standard_LRS   #File share SKU version
+
+---
+#Persistent Volume Claim manifest
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: azure-fileshare-pvc
+spec:
+  accessModes:
+    - ReadWriteMany  #Saying from many pods I can read and write to volume
+  storageClassName: azure-fileshare-sc  #StorageClass name from above
+  resources:
+    requests:
+      storage: 4Gi
+---
+#pod deployment manifest
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins
+  labels:
+    app: jenkins
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jenkins
+  template:
+    metadata:
+      name: jenkins
+      labels:
+        app: jenkins
+    
+    spec:
+      containers:
+        - name: jenkins
+          image: signaturedevops.azurecr.io/jenkins-new
+          imagePullPolicy: Always    # ensures that the container image is always pulled from the container registry every time a pod is started. This means                                         that Kubernetes will not use a locally cached version of the image, even if it exists on the node.
+          ports:
+          - containerPort: 8080
+            name: jenkins-port
+          volumeMounts:
+            - name: jenkins-azure-fileshare-volume
+              mountPath: /var/lib/jenkins
+      volumes:
+         - name: jenkins-azure-fileshare-volume    #Same as volumeMounts name
+           persistentVolumeClaim:
+             claimName: azure-fileshare-pvc
+      
+
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins-loadbalancer-service                         #LoadBalancer name
+
+spec:
+  type: LoadBalancer                                                                    # Type can be LoadBalancer, ClusterIp, NodePort
+  selector:
+    app: jenkins                                                             # App/name Loadbalancer traffic across Pods matching this label selector
+  ports:
+    - name: http
+      port: 8080                                                                           #service port
+      targetPort: 8080                                                                     #Container Port
+
+##To deploy clusterIP or NodePort service, just change the type to either.
+
+

@@ -1,0 +1,42 @@
+#simple app deployment manifest
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp
+  labels:
+    app: webapp
+
+spec:
+  replicas: 1
+  selector:                     #Labels to be used as part of pod Template
+    matchLabels:
+      app: webapp
+
+  template:                                            #pod template
+    metadata:
+      labels:
+        app: webapp
+    spec:                                              #Pod specification
+      containers:
+        - name: webapp
+          image: signaturedevops.azurecr.io/nginx-v1
+
+          ports:                                       #Container port
+            - containerPort: 80
+              name: webapp-port
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp-loadbalancer-service
+
+spec:
+  type: LoadBalancer                                                                    # Type can be LoadBalancer, ClusterIp, NodePort
+  selector:
+    app: webapp                                                             # Loadbalancer traffic across Pods matching this label selector
+  ports:
+    - name: http
+      port: 80                                                                           #service port
+      targetPort: 8080                                                                     #Container Port
+
